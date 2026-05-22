@@ -1103,8 +1103,12 @@ program
   .description('Start CodeGraph as an MCP server for AI assistants')
   .option('-p, --path <path>', 'Project path (optional for MCP mode, uses rootUri from client)')
   .option('--mcp', 'Run as MCP server (stdio transport)')
+  .option('--http', 'Run as HTTP+SSE MCP server (multi-client)')
+  .option('--config <path>', 'Server config file for --http mode (default: ~/.codegraph/server.json)')
+  .option('--port <number>', 'Port override for --http mode')
+  .option('--host <addr>', 'Host override for --http mode')
   .option('--no-watch', 'Disable the file watcher (no auto-sync; useful on slow filesystems like WSL2 /mnt drives)')
-  .action(async (options: { path?: string; mcp?: boolean; watch?: boolean }) => {
+  .action(async (options: { path?: string; mcp?: boolean; http?: boolean; config?: string; port?: string; host?: string; watch?: boolean }) => {
     const projectPath = options.path ? resolveProjectPath(options.path) : undefined;
 
     // Commander sets watch=false when --no-watch is passed. Route it through
@@ -1114,7 +1118,19 @@ program
     }
 
     try {
-      if (options.mcp) {
+      if (options.http) {
+        const { loadServerConfig } = await import('../mcp/server-config');
+        const { HttpMCPServer } = await import('../mcp/http-server');
+        const config = loadServerConfig(options.config);
+        if (options.port) config.port = parseInt(options.port, 10);
+        if (options.host) config.host = options.host;
+        const server = new HttpMCPServer(config);
+        await server.start();
+
+        const shutdown = () => { server.stop(); process.exit(0); };
+        process.on('SIGINT', shutdown);
+        process.on('SIGTERM', shutdown);
+      } else if (options.mcp) {
         // Start MCP server - it handles initialization lazily based on rootUri from client
         const { MCPServer } = await import('../mcp/index');
         const server = new MCPServer(projectPath);

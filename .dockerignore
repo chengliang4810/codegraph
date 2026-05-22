@@ -1,0 +1,9 @@
+node_modules
+dist
+.codegraph
+.git
+__tests__
+*.md
+.github
+.vscode
+.cursor

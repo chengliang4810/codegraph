@@ -1,0 +1,10 @@
+services:
+  codegraph:
+    image: codegraph/codegraph:latest
+    # build: .  # 本地构建时取消注释
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./server.json:/root/.codegraph/server.json:ro
+      - /path/to/your/repos:/data/repos
+    restart: unless-stopped
